@@ -6,7 +6,12 @@ from enum import Enum
 def deserialize_highscore() -> int:
     with open("score.txt", 'r') as f:
         line = f.readline()
-        return int(line)
+        try:
+            return int(line)
+        except:
+            print("Failed to load high score from file!")
+            serialize_highscore(0)
+            return 0
     
 def serialize_highscore(score: int):
     with open("score.txt", 'w') as f:
