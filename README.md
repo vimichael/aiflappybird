@@ -8,14 +8,14 @@ Clone the repository:
 git clone https://github.com/m1chaelwilliams/aiflappybird
 ```
 
-Open in it in a code editor (recommended):
+## Open in it in a code editor (recommended):
 
 For __VS Code__:
 ```bash
 code .
 ```
 
-Open a terminal in the root directory of the project and create a virtual environment:
+## Open a terminal in the root directory of the project and create a virtual environment:
 
 For Windows:
 ```bash
@@ -27,7 +27,7 @@ For Mac:
 python3 -m venv .venv
 ```
 
-Activate your virtual environment:
+## Activate your virtual environment:
 
 For Windows:
 ```bash
@@ -39,13 +39,13 @@ For Mac:
 source .venv/bin/activate
 ```
 
-Install the dependencies with pip (pip3 for mac):
+## Install the dependencies with pip (pip3 for mac):
 
 ```bash
 pip install pygame-ce
 ```
 
-Run the project!
+## Run the project!
 
 For Windows:
 ```bash
