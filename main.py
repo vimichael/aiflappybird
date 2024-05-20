@@ -3,6 +3,15 @@ import pygame
 from pygame.math import Vector2
 from enum import Enum
 
+def deserialize_highscore() -> int:
+    with open("score.txt", 'r') as f:
+        line = f.readline()
+        return int(line)
+    
+def serialize_highscore(score: int):
+    with open("score.txt", 'w') as f:
+        f.write(str(score))
+
 class GameState(Enum):
     START = 0,
     MAIN = 1
@@ -99,6 +108,10 @@ class Game:
         self.screen: pygame.Surface = pygame.display.set_mode(Game.SCREENSIZE)
         self.clock = pygame.time.Clock()
         self.running = True
+        self.debug = False
+
+        self.score: int = 0
+        self.high_score: int = deserialize_highscore()
 
         # initialize the fonts and the game state
         Game.FONT = pygame.font.Font(None, 30)
@@ -146,6 +159,12 @@ class Game:
         self.pipes.append(Pipe(Vector2(Game.SCREENSIZE.x + Pipe.SPACING, 200)))
         self.pipes.append(Pipe(Vector2(Game.SCREENSIZE.x + Pipe.SPACING*2, 250)))
 
+        self.high_score = max(self.high_score, self.score)
+
+        self.text_pool["high_score"] = {}
+        self.text_pool["high_score"]["surface"] = Game.FONT.render(f"High Score {self.high_score}", True, "black", None)
+        self.text_pool["high_score"]["rect"] = self.text_pool["high_score"]["surface"].get_rect(center = (Game.SCREENSIZE.x/2, Game.SCREENSIZE.y/2 - 200))
+
         # reset the score
         self.score = 0
         self.score_text: pygame.Surface = Game.FONTLG.render(str(self.score), True, "white")
@@ -165,6 +184,8 @@ class Game:
                 elif e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_q:
                         self.running = False
+                    elif e.key == pygame.K_d:
+                        self.debug = not self.debug
 
             # draw the background
             self.screen.blit(self.bg_img, (0,0))
@@ -182,6 +203,12 @@ class Game:
                     self.screen.blit(
                         self.text_pool["start_prompt"]["surface"], 
                         self.text_pool["start_prompt"]["rect"]
+                    )
+
+                    # draw the text prompt
+                    self.screen.blit(
+                        self.text_pool["high_score"]["surface"], 
+                        self.text_pool["high_score"]["rect"]
                     )
 
                 case GameState.MAIN:
@@ -203,11 +230,31 @@ class Game:
                             self.setup()
 
                         pipe.draw(self.screen)
+                        if self.debug:
+                            pygame.draw.rect(
+                                self.screen,
+                                "red",
+                                pipe.top_rect,
+                                2
+                            )
+                            pygame.draw.rect(
+                                self.screen,
+                                "red",
+                                pipe.bottom_rect,
+                                2
+                            )
                     
                     self.player.update(events)
                     self.screen.blit(self.score_text, ((Game.SCREENSIZE.x/2 - (self.score_text.get_width()/2)), 50))
 
             self.player.draw(self.screen)
+            if self.debug:
+                pygame.draw.rect(
+                    self.screen,
+                    "green",
+                    self.player.rect,
+                    2
+                )
 
             # update the display
             pygame.display.update()
@@ -218,6 +265,7 @@ class Game:
         self.close()
 
     def close(self):
+        serialize_highscore(self.high_score)
         pygame.quit()
 
 # ENTRY POINT OF THE APP
