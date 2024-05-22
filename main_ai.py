@@ -282,7 +282,7 @@ class Game:
 						self.sfx_hit.play()
 
 					# kill bird if it his the ground
-					if bird.rect.bottom > Game.SCREENSIZE.y:
+					elif bird.rect.bottom > Game.SCREENSIZE.y:
 						kill_list.append(bird)
 						self.sfx_die.play()
 
@@ -332,7 +332,8 @@ class Game:
 						),
 						2
 					)
-			
+			active_pipe_index = min(len(self.pipes)-1, active_pipe_index)
+
 			# remove dead pipe and create a new one in the back
 			if dead_pipe != None:
 				self.pipes.remove(dead_pipe)
@@ -428,7 +429,7 @@ class Game:
 	def close(self):
 		pygame.quit()
 
-NUM_GENERATIONS = 50
+NUM_GENERATIONS = 100
 
 def run(config_path: str) -> None:
 
