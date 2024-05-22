@@ -111,6 +111,30 @@ class Game:
 	def __init__(self) -> None:
 		# initially pygame
 		pygame.init()
+		pygame.font.init()
+		pygame.mixer.init()
+
+		self.sfx_hit = pygame.mixer.Sound("assets/hit.mp3")
+		self.sfx_jump = pygame.mixer.Sound("assets/flap.mp3")
+		self.sfx_die = pygame.mixer.Sound("assets/die.mp3")
+		self.sfx_score = pygame.mixer.Sound("assets/score.mp3")
+
+		self.sounds = [
+			self.sfx_hit,
+			self.sfx_jump,
+			self.sfx_die,
+			self.sfx_score
+		]
+
+		self.muted = False
+		
+		for sound in self.sounds:
+			sound.set_volume(0.2)
+
+		pygame.mixer.music.set_volume(0.2)
+
+		self.generation = 0
+
 		# initialize the screen, clock and running state
 		self.screen: pygame.Surface = pygame.display.set_mode(Game.SCREENSIZE)
 		self.clock = pygame.time.Clock()
@@ -154,6 +178,8 @@ class Game:
 
 	def run(self, genomes, config) -> None:
 
+		self.generation += 1
+
 		# load the player image and scale it
 		player_img = pygame.image.load("assets/flappybird.png").convert_alpha()
 		player_img = pygame.transform.scale_by(player_img, 0.1)
@@ -190,6 +216,16 @@ class Game:
 						self.running = False
 					elif e.key == pygame.K_d:
 						self.debug = not self.debug
+					elif e.key == pygame.K_m:
+
+						if self.muted:
+							for sound in self.sounds:
+								sound.set_volume(0.2)
+						else:
+							for sound in self.sounds:
+								sound.set_volume(0)
+						self.muted = not self.muted
+						
 
 			# draw the background
 			self.screen.blit(self.bg_img, (0,0))
@@ -221,6 +257,8 @@ class Game:
 							for gen in ges:
 								gen.fitness += 5
 							
+							self.sfx_score.play()
+
 							self.score += 1
 							print(f"Score: {self.score}")
 
@@ -230,8 +268,12 @@ class Game:
 					# kill bird if it collides with pipe
 					if bird.rect.colliderect(pipe.bottom_rect) or bird.rect.colliderect(pipe.top_rect):
 						kill_list.append(bird)
+						self.sfx_hit.play()
+
 					if bird.rect.bottom > Game.SCREENSIZE.y:
 						kill_list.append(bird)
+
+						self.sfx_die.play()
 
 				# free all birds from kill_list
 				for bird in kill_list:
@@ -279,8 +321,6 @@ class Game:
 					)
 			
 			if dead_pipe != None:
-				print(f"Removing pipe at {dead_pipe.top_rect.x, dead_pipe.top_rect.y}")
-
 				self.pipes.remove(dead_pipe)
 
 				last_pipe_pos = self.pipes[len(self.pipes)-1].position
@@ -323,6 +363,7 @@ class Game:
 				# if output reaches threshold (intelligently placed at 0.5)
 				if output[0] > 0.5:
 					bird.jump()
+					self.sfx_jump.play()
 
 				bird.draw(self.screen)
 
@@ -336,11 +377,39 @@ class Game:
 						2
 					)
 
+				self.screen.blit(
+					pygame.font.Font(size=30).render(f"Num Birds: {len(birds)}", True, "black"),
+					(10,10)
+				)
+				self.screen.blit(
+					pygame.font.Font(size=30).render(f"Generation: {self.generation}", True, "black"),
+					(10,50)
+				)
+				self.screen.blit(
+					pygame.font.Font(size=30).render(f"Score: {self.score}", True, "black"),
+					(10,90)
+				)
+				self.screen.blit(
+					pygame.font.Font(size=30).render(f"Muted: {self.muted}", True, "black"),
+					(10,130)
+				)
+
+			else:
+
+				text = pygame.font.Font(size=40).render(f"Score: {self.score}", True, "black")
+				self.screen.blit(
+					text,
+					((Game.SCREENSIZE.x - text.get_width()) / 2, 50)
+				)
+
 			# update the display
 			pygame.display.update()
+		
+		if self.score > self.high_score:
+			serialize_highscore(self.score)
+		self.score = 0
 
 	def close(self):
-		serialize_highscore(self.high_score)
 		pygame.quit()
 
 NUM_GENERATIONS = 50
@@ -366,8 +435,7 @@ def run(config_path: str) -> None:
 	game = Game()
 	winner = population.run(game.run, NUM_GENERATIONS)
 
-	if game.score > game.high_score:
-		serialize_highscore(game.score)
+	game.close()	
 
 	print(f"Winner of the round: {winner}")
 
@@ -377,5 +445,3 @@ if __name__ == "__main__":
 	local_dir = os.path.dirname(__file__) # get path to file
 	config_path = os.path.join("config.txt") # get the config path
 	run(config_path)
-
-	pygame.quit()
