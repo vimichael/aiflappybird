@@ -8,7 +8,7 @@ import neat
 import random
 
 def deserialize_highscore() -> int:
-	with open("score.txt", 'r') as f:
+	with open("score_ai.txt", 'r') as f:
 		line = f.readline()
 		try:
 			return int(line)
@@ -18,7 +18,7 @@ def deserialize_highscore() -> int:
 			return 0
 
 def serialize_highscore(score: int):
-	with open("score.txt", 'w') as f:
+	with open("score_ai.txt", 'w') as f:
 		f.write(str(score))
 
 class GameState(Enum):
@@ -33,26 +33,18 @@ class Pipe:
 	SPEED = 300
 	TOP: pygame.Surface = None
 	BOTTOM: pygame.Surface = None
-	GAPSIZE = 200
+	GAPSIZE = 300
 	SPACING = 180
 	VISUALOFFSET = -100
 
 	def __init__(self, position: Vector2) -> None:
-		self.top_rect: pygame.Rect = Pipe.TOP.get_rect()
-		self.bottom_rect: pygame.Rect = Pipe.BOTTOM.get_rect()
-		self.position = position
+		self.top_rect: pygame.Rect = Pipe.TOP.get_rect(bottom = position.y - Pipe.GAPSIZE/2)
+		self.bottom_rect: pygame.Rect = Pipe.BOTTOM.get_rect(top = position.y + Pipe.GAPSIZE/2)
+		self._position = position
 		self.active = True
-		
 		
 	def update(self, dt: float) -> None:
 		self.move_x(-Pipe.SPEED*dt)
-
-		if self.position.x < Pipe.VISUALOFFSET:
-			self.position = Vector2(
-				self.reset_dest_x, 
-				self.position.y + random.randint(-150, 150)
-			)
-			self.active = True
 
 	def draw(self, surface) -> None:
 		surface.blit(Pipe.TOP, self.top_rect)
@@ -66,7 +58,9 @@ class Pipe:
 	def position(self, val: Vector2) -> None:
 		self._position = val
 		self.top_rect.bottomleft = val
+		# self.top_rect.bottom -= Pipe.GAPSIZE/2
 		self.bottom_rect.topleft = (val.x, val.y + Pipe.GAPSIZE)
+		# self.bottom_rect.top += Pipe.GAPSIZE/2
 
 	@property
 	def reset_dest_x(self) -> int:
@@ -74,8 +68,8 @@ class Pipe:
 
 	def move_x(self, val):
 		self._position.x += val
-		self.top_rect.x += val
-		self.bottom_rect.x += val
+		self.top_rect.x = self._position.x
+		self.bottom_rect.x = self._position.x
 
 class Player:
 	'''
@@ -101,11 +95,13 @@ class Player:
 
 		self.rect.x += self.velocity.x * dt
 		self.rect.y += self.velocity.y * dt
+		self.rect.y = max(0, self.rect.y)
 
 	def draw(self, surface: pygame.Surface):
 		surface.blit(self.image, self.rect)
 
 class Game:
+
 	SCREENSIZE: Vector2 = Vector2(360, 640)
 	FPS = 60
 	FONT: pygame.font.Font = None
@@ -129,14 +125,6 @@ class Game:
 		Game.FONTLG = pygame.font.Font(None, 60)
 		Game.STATE = GameState.START
 
-		# initialize text data
-		self.text_pool: dict[str, dict[str, any]] = {}
-
-		# create first text entry (image, position)
-		self.text_pool["start_prompt"] = {}
-		self.text_pool["start_prompt"]["surface"] = Game.FONT.render("Press Space to Start", True, "black", None)
-		self.text_pool["start_prompt"]["rect"] = self.text_pool["start_prompt"]["surface"].get_rect(center = (Game.SCREENSIZE.x/2, Game.SCREENSIZE.y/2 - 100))
-
 		# load the background image
 		self.bg_img: pygame.Surface = pygame.image.load("assets/flappybirdbg.png").convert()
 
@@ -151,10 +139,6 @@ class Game:
 
 	def setup(self):
 
-		# position the player and reset velocity
-		# self.player.rect.center = (Game.SCREENSIZE.x/2, Game.SCREENSIZE.y/2)
-		# self.player.velocity = Vector2()
-
 		# empty the list of pipes
 		self.pipes: list[Pipe] = []
 
@@ -165,13 +149,8 @@ class Game:
 
 		self.high_score = max(self.high_score, self.score)
 
-		self.text_pool["high_score"] = {}
-		self.text_pool["high_score"]["surface"] = Game.FONT.render(f"High Score {self.high_score}", True, "black", None)
-		self.text_pool["high_score"]["rect"] = self.text_pool["high_score"]["surface"].get_rect(center = (Game.SCREENSIZE.x/2, Game.SCREENSIZE.y/2 - 200))
-
 		# reset the score
 		self.score = 0
-		self.score_text: pygame.Surface = Game.FONTLG.render(str(self.score), True, "white")
 
 	def run(self, genomes, config) -> None:
 
@@ -216,12 +195,18 @@ class Game:
 			self.screen.blit(self.bg_img, (0,0))
 
 			# current pipe (the leftmost pipe that is still active after iteration)
-			active_pipe_index = 0
+			
+			dead_pipe = None
 
+			active_pipe_index = 1
 			for pipe in self.pipes:
 
 				# update the pipe
 				pipe.update(dt)
+
+				# if pipe is offscreen
+				if pipe.position.x < -pipe.top_rect.width:
+					dead_pipe = pipe
 				
 				# state var. if complete, pipe is now behind all birds
 				complete = False
@@ -231,8 +216,16 @@ class Game:
 				# check if birds passed the pipe
 				for bird in birds:
 					if pipe.position.x < bird.rect.x and pipe.active:
-						pipe.active = False
-						complete = True
+						if pipe.active:
+							pipe.active = False
+							for gen in ges:
+								gen.fitness += 5
+							
+							self.score += 1
+							print(f"Score: {self.score}")
+
+						active_pipe_index += 1
+						
 
 					# kill bird if it collides with pipe
 					if bird.rect.colliderect(pipe.bottom_rect) or bird.rect.colliderect(pipe.top_rect):
@@ -242,24 +235,15 @@ class Game:
 
 				# free all birds from kill_list
 				for bird in kill_list:
-					
+
+					print(f"Bird died. {len(birds)} left")
 					networks.pop(birds.index(bird))
 					ges.pop(birds.index(bird))
 					birds.remove(bird)
-
-				if complete:
-					self.score += 1
-					active_pipe_index += 1
-
-					for gen in ges:
-						gen.fitness += 5
-
-					print(f"Score: {self.score}")
-
-				
 					
 
 				pipe.draw(self.screen)
+
 				if self.debug:
 					pygame.draw.rect(
 						self.screen,
@@ -273,6 +257,56 @@ class Game:
 						pipe.bottom_rect,
 						2
 					)
+					pygame.draw.circle(
+						self.screen,
+						"blue",
+						pipe.position,
+						15.0,
+						1
+					)
+					pygame.draw.line(
+						self.screen,
+						"blue",
+						(
+							pipe.top_rect.centerx,
+							pipe.top_rect.bottom
+						),
+						(
+							pipe.bottom_rect.centerx,
+							pipe.bottom_rect.top
+						),
+						2
+					)
+			
+			if dead_pipe != None:
+				print(f"Removing pipe at {dead_pipe.top_rect.x, dead_pipe.top_rect.y}")
+
+				self.pipes.remove(dead_pipe)
+
+				last_pipe_pos = self.pipes[len(self.pipes)-1].position
+
+				self.pipes.append(
+					Pipe(
+						Vector2(
+							last_pipe_pos.x + Pipe.SPACING,
+							random.randint(200, 400)
+					  	)
+					)
+				)
+
+			if self.debug:
+				pygame.draw.rect(
+					self.screen,
+					"red",
+					self.pipes[active_pipe_index].top_rect,
+					6
+				)
+				pygame.draw.rect(
+					self.screen,
+					"red",
+					self.pipes[active_pipe_index].bottom_rect,
+					6
+				)
 			
 			for index, bird in enumerate(birds):
 				bird.update(dt)
@@ -331,6 +365,9 @@ def run(config_path: str) -> None:
 
 	game = Game()
 	winner = population.run(game.run, NUM_GENERATIONS)
+
+	if game.score > game.high_score:
+		serialize_highscore(game.score)
 
 	print(f"Winner of the round: {winner}")
 

@@ -1,6 +1,8 @@
 # AI Flappy Bird
 A.I. Flappy bird project made for the Seattle University A.n.I.Ma.L club.
 
+![Demo GIF](demo.gif)
+
 # Repo Roadmap
 - `main_solo.py` is a solo version of the game that you can play
 - `main_ai.py` is the version adapted to train an A.I.
