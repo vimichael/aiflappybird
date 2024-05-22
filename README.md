@@ -9,6 +9,10 @@ A.I. Flappy bird project made for the Seattle University A.n.I.Ma.L club.
 - `config.txt` is the config file that __NEAT__ uses.
 - `score.txt` is the high score of the solo game!
 
+# Explanation
+
+For a general explanation of what's going on, see: [explanation.md](explanation.md)
+
 # Setup
 
 Clone the repository:
