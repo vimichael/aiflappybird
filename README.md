@@ -58,12 +58,12 @@ pip install neat-python
 
 For Windows:
 ```bash
-python -m main
+python -m main_(solo/ai)
 ```
 
 For Mac:
 ```bash
-python3 -m main.py
+python3 -m main_(solo/ai).py
 ```
 
 ## Credits
