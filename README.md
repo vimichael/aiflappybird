@@ -56,3 +56,7 @@ For Mac:
 ```bash
 python3 -m main.py
 ```
+
+## Credits
+
+The __A.I.__ portion of this repository is 99% a port of Tech with Tim's [video series](https://youtube.com/playlist?list=PLzMcBGfZo4-lwGZWXz5Qgta_YNX3_vLS2&si=2zazEkI7Tu0zfd8K).	
