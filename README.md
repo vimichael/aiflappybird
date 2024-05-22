@@ -43,6 +43,7 @@ source .venv/bin/activate
 
 ```bash
 pip install pygame-ce
+pip install neat-python
 ```
 
 ## Run the project!
