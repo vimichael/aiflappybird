@@ -50,7 +50,7 @@ python3 -m venv .venv
 For Windows:
 
 ```bash
-.venv/bin/activate
+.venv/scripts/activate
 ```
 
 For Mac:
